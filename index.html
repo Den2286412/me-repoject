@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Менеджер Електронної Бібліотеки (Один Файл)</title>
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #007bff;
+            margin-bottom: 30px;
+        }
+
+        /* Картки та форми */
+        .card {
+            background: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .add-form h2 {
+            color: #007bff;
+            margin-top: 0;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box; 
+        }
+
+        /* Кнопки */
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-toggle {
+            background-color: #ffc107;
+            color: #333;
+            margin-left: 10px;
+        }
+
+        .btn-toggle:hover {
+            background-color: #e0a800;
+        }
+        
+        .btn-remove {
+            background-color: #dc3545;
+            color: white;
+            margin-left: 10px;
+        }
+        
+        .btn-remove:hover {
+            background-color: #c82333;
+        }
+
+        /* Список книг */
+        .book-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            padding-top: 10px;
+        }
+
+        .book-item {
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            transition: transform 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .book-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .book-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .book-author {
+            font-style: italic;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        .book-genre, .book-year {
+            font-size: 0.9em;
+            color: #777;
+        }
+
+        .book-status {
+            padding: 5px 8px;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .status-available {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status-issued {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Інформація про кількість */
+        .summary-info {
+            display: flex;
+            justify-content: flex-end;
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            padding: 10px 0;
+            border-bottom: 2px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 Менеджер Бібліотеки</h1>
+
+        <div class="card add-form">
+            <h2>Додати Нову Книгу</h2>
+            <form id="addBookForm">
+                <div class="form-group">
+                    <label for="title">Назва:</label>
+                    <input type="text" id="title" required>
+                </div>
+                <div class="form-group">
+                    <label for="author">Автор:</label>
+                    <input type="text" id="author" required>
+                </div>
+                <div class="form-group">
+                    <label for="year">Рік видання:</label>
+                    <input type="number" id="year" required min="1000" max="2099" value="2023">
+                </div>
+                <div class="form-group">
+                    <label for="genre">Жанр:</label>
+                    <input type="text" id="genre" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Додати книгу</button>
+            </form>
+        </div>
+
+        <div class="summary-info">
+             <p>Загальна кількість книг: <span id="totalBooksCount">0</span></p>
+        </div>
+
+        <div class="card">
+            <h2>Список Книг</h2>
+            <div id="bookList" class="book-grid">
+                </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * JS LOGIC - Менеджер бібліотеки
+         */
+
+        // Початковий масив бібліотеки
+        let library = [
+            { title: "1984", author: "Джордж Орвелл", year: 1949, genre: "Дистопія", available: true },
+            { title: "Гаррі Поттер", author: "Дж. К. Ролінґ", year: 1997, genre: "Фентезі", available: false },
+            { title: "Володар перснів", author: "Дж. Р. Р. Толкін", year: 1954, genre: "Фентезі", available: true },
+            { title: "Код да Вінчі", author: "Ден Браун", year: 2003, genre: "Детектив", available: true },
+            { title: "Маленький принц", author: "Антуан де Сент-Екзюпері", year: 1943, genre: "Філософія", available: false }
+        ];
+
+        // 1. Посилання на елементи DOM
+        const bookListContainer = document.getElementById('bookList');
+        const addBookForm = document.getElementById('addBookForm');
+        const totalBooksCountElement = document.getElementById('totalBooksCount');
+
+        // ----------------------------------------------------------------------
+        // 2. ФУНКЦІЇ ЛОГІКИ БІБЛІОТЕКИ
+        // ----------------------------------------------------------------------
+
+        /**
+         * Додає нову книгу до масиву.
+         */
+        function addBook(newBook) {
+            const exists = library.some(book => book.title.toLowerCase() === newBook.title.toLowerCase());
+            if (exists) {
+                alert(`Помилка: Книга "${newBook.title}" вже існує.`);
+                return false;
+            }
+            library.push(newBook);
+            return true;
+        }
+
+        /**
+         * Змінює статус доступності книги за назвою.
+         */
+        function toggleAvailability(title) {
+            const book = library.find(b => b.title.toLowerCase() === title.toLowerCase());
+
+            if (book) {
+                book.available = !book.available;
+                renderBookList(); 
+                return true;
+            } else {
+                alert(`Помилка: Книга "${title}" не знайдена.`);
+                return false;
+            }
+        }
+        
+        /**
+         * Видаляє книгу за назвою.
+         */
+        function removeBook(title) {
+            const initialLength = library.length;
+            // Використання filter для створення нового масиву
+            library = library.filter(book => book.title.toLowerCase() !== title.toLowerCase());
+
+            if (library.length < initialLength) {
+                alert(`Книга "${title}" видалена.`);
+                renderBookList();
+                return true;
+            } else {
+                alert(`Помилка: Книга "${title}" не знайдена.`);
+                return false;
+            }
+        }
+
+        /**
+         * Оновлює загальну кількість книг.
+         */
+        function updateSummary() {
+            totalBooksCountElement.textContent = library.length;
+        }
+
+        // ----------------------------------------------------------------------
+        // 3. ФУНКЦІЇ РЕНДЕРИНГУ (ОНОВЛЕННЯ DOM)
+        // ----------------------------------------------------------------------
+
+        /**
+         * Створює HTML-елемент для однієї книги.
+         */
+        function createBookElement(book) {
+            const bookItem = document.createElement('div');
+            bookItem.classList.add('book-item');
+
+            // Клас статусу та текст
+            const statusClass = book.available ? 'status-available' : 'status-issued';
+            const statusText = book.available ? 'Доступна' : 'Видана';
+
+            bookItem.innerHTML = `
+                <div class="book-info">
+                    <div class="book-title">${book.title}</div>
+                    <div class="book-author">${book.author}</div>
+                    <div class="book-year">Рік: ${book.year}</div>
+                    <div class="book-genre">Жанр: ${book.genre}</div>
+                    <div class="book-status ${statusClass}">${statusText}</div>
+                </div>
+                <div class="book-actions">
+                    <button class="btn btn-toggle" data-title="${book.title}">
+                        Змінити статус
+                    </button>
+                    <button class="btn btn-remove" data-title="${book.title}">
+                        Видалити
+                    </button>
+                </div>
+            `;
+
+            // Обробник для зміни статусу
+            bookItem.querySelector('.btn-toggle').addEventListener('click', (e) => {
+                const title = e.target.dataset.title;
+                toggleAvailability(title);
+            });
+            
+            // Обробник для видалення
+            bookItem.querySelector('.btn-remove').addEventListener('click', (e) => {
+                const title = e.target.dataset.title;
+                if (confirm(`Ви впевнені, що хочете видалити книгу "${title}"?`)) {
+                    removeBook(title);
+                }
+            });
+
+            return bookItem;
+        }
+
+        /**
+         * Очищує та заново рендерить весь список книг.
+         */
+        function renderBookList() {
+            bookListContainer.innerHTML = '';
+
+            if (library.length === 0) {
+                 bookListContainer.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; color: #777;">Бібліотека порожня.</p>';
+            } else {
+                library.forEach(book => {
+                    const bookElement = createBookElement(book);
+                    bookListContainer.appendChild(bookElement);
+                });
+            }
+
+            updateSummary();
+        }
+
+        // ----------------------------------------------------------------------
+        // 4. ОБРОБНИК ПОДІЙ ФОРМИ
+        // ----------------------------------------------------------------------
+
+        addBookForm.addEventListener('submit', (e) => {
+            e.preventDefault(); 
+
+            // Збираємо дані
+            const title = document.getElementById('title').value.trim();
+            const author = document.getElementById('author').value.trim();
+            const year = parseInt(document.getElementById('year').value);
+            const genre = document.getElementById('genre').value.trim();
+            
+            const newBook = {
+                title: title,
+                author: author,
+                year: year,
+                genre: genre,
+                available: true 
+            };
+
+            if (addBook(newBook)) {
+                addBookForm.reset(); 
+                renderBookList(); 
+            }
+        });
+
+
+        // ----------------------------------------------------------------------
+        // 5. ІНІЦІАЛІЗАЦІЯ
+        // ----------------------------------------------------------------------
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderBookList();
+        });
+    </script>
+</body>
+</html>
